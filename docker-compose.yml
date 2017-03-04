@@ -1,0 +1,92 @@
+version: '2'
+
+networks:
+  api1:
+    # Use a custom driver
+    driver: bridge
+  api2:
+    # Use a custom driver
+    driver: bridge
+  back:
+    # Use a custom driver
+    driver: bridge
+
+services:
+### Nginx Server Container ##################################
+    nginx1:
+        container_name: nginx1
+        build:
+            context: ./nginx
+            args:
+                - GO_SITE=web1
+                - GO_PORT=8000
+        volumes:
+            - ./www:/var/www/html
+        ports:
+            - "8080:80"
+        networks:
+            - api1
+#nginx Server Container
+    nginx2:
+        container_name: nginx2
+        build:
+            context: ./nginx
+            args:
+                - GO_SITE=web2
+                - GO_PORT=9000
+        volumes:
+            - ./www:/var/www/html
+        ports:
+            - "8081:80"
+        networks:
+            - api2
+### Golang Container
+    golang:
+        container_name: API
+        build:
+            context: ./golang
+        volumes:
+            - ./api/:/go/src/app
+        networks:
+            - api1
+            - api2
+            - back
+### mysql Server Container ##################################
+    mysql:
+        container_name: mysql
+        image: mysql:8.0
+        volumes:
+            - ./db:/var/lib/mysql
+        environment:
+            MYSQL_ROOT_PASSWORD: root
+        networks:
+            - back
+### PhpMyadmin Container #######################################
+    phpmyadmin:
+        container_name: phpmyadmin
+        image: phpmyadmin/phpmyadmin
+        environment:
+            PMA_HOST: mysql
+        networks:
+            - back
+            - api1
+            - api2
+        ports:
+            - "8083:80"
+### Mongo Container #######################################
+    mongo:
+        container_name: mongo
+        image: mongo:latest
+        networks:
+            - back
+    mongo-express:
+            container_name: mongo-express
+            image: mongo-express:latest
+            links:
+                    - "mongo:mongo"
+            ports:
+                - "8084:8081"
+            networks:
+            - back
+            - api1
+            - api2
